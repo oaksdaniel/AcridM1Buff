@@ -14,6 +14,7 @@ using IL.RoR2.Projectile;
 using RoR2.Projectile;
 using On.RoR2.Projectile;
 using ProjectileDotZone = RoR2.Projectile.ProjectileDotZone;
+using EntityStates.Croco;
 
 namespace AcridM1Buff
 {
@@ -35,7 +36,7 @@ namespace AcridM1Buff
         public const string PluginGUID = PluginAuthor + "." + PluginName;
         public const string PluginAuthor = "OakPrime";
         public const string PluginName = "AcridM1Buff";
-        public const string PluginVersion = "0.1.0";
+        public const string PluginVersion = "0.2.0";
 
         private readonly Dictionary<string, string> DefaultLanguage = new Dictionary<string, string>();
 
@@ -48,20 +49,27 @@ namespace AcridM1Buff
                 {
                     ILCursor c = new ILCursor(il);
                     c.TryGotoNext(
+                        x => x.MatchLdarg(out _),
+                        x => x.MatchLdarg(out _),
                         x => x.MatchCallOrCallvirt<EntityStates.BasicMeleeAttack>(nameof(EntityStates.BasicMeleeAttack.AuthorityModifyOverlapAttack)),
                         x => x.MatchRet()
                     );
-                    c.EmitDelegate<Func<RoR2.OverlapAttack, RoR2.OverlapAttack>>(overlapAttack =>
+                    c.Emit(OpCodes.Ldarg_0);
+                    c.Index += 2;
+                    c.EmitDelegate<Func<EntityStates.Croco.Slash, RoR2.OverlapAttack, RoR2.OverlapAttack>>((slash, overlapAttack) =>
                     {
-                        overlapAttack.damageType = DamageType.BlightOnHit;
+                        CrocoDamageTypeController controller = slash.GetComponent<CrocoDamageTypeController>();
+                        DamageType damageType = (bool)(UnityEngine.Object)controller ? controller.GetDamageType() : DamageType.Generic;
+                        overlapAttack.damageType = damageType;
+                        
                         return overlapAttack;
                     });
                     //c.Index++;
                     /*c.EmitDelegate<Action<EntityStates.Croco.Slash, RoR2.OverlapAttack>>((slash, overlapAttack) =>
                     {
-                        //CrocoDamageTypeController controller = slash.GetComponent<CrocoDamageTypeController>();
-                        //DamageType damageType = /*(bool)(UnityEngine.Object)controller ? controller.GetDamageType() : DamageType.Generic;
-                        //overlapAttack.damageType = damageType;
+                        CrocoDamageTypeController controller = slash.GetComponent<CrocoDamageTypeController>();
+                        DamageType damageType = /*(bool)(UnityEngine.Object)controller ? controller.GetDamageType() : DamageType.Generic;
+                        overlapAttack.damageType = damageType;
                         slash.step = 1;
                     });*/
                     /*c.Emit(OpCodes.Ldarg_0);
